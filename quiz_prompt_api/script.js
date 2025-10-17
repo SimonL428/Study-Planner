@@ -87,6 +87,12 @@ const SYSTEM_PROMPT = "You are a helpful and friendly assistant.";
       copyLinkButton.style.display = "inline-block";
       copyHelper.style.display = "inline";
       updateStats();
+
+      // scroll chat container to bottom so new responses are visible
+      const chatContainer = document.querySelector(".chat-container");
+      if (chatContainer) {
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+      }
     }
   };
 
@@ -176,12 +182,19 @@ const SYSTEM_PROMPT = "You are a helpful and friendly assistant.";
     promptInput.focus();
   };
 
-  resetButton.addEventListener("click", () => {
+  resetButton.addEventListener("click", async () => {
     promptInput.value = "";
     resetUI();
-    session.destroy();
+    if (session && session.destroy) {
+      try {
+        // try to cleanly destroy the session
+        await session.destroy();
+      } catch (err) {
+        // ignore destroy errors
+      }
+    }
     session = null;
-    updateSession();
+    await updateSession();
   });
 
   copyLinkButton.addEventListener("click", () => {

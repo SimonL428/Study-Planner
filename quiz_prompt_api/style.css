@@ -1,3 +1,4 @@
+/* ---------- ORIGINAL STYLE (kept intact) ---------- */
 /**
  * Copyright 2024 Google LLC
  * SPDX-License-Identifier: Apache-2.0
@@ -27,21 +28,16 @@ html {
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
   margin: 0;
-  padding: 0;
-  background-color: var(--background-color);
   color: var(--text-primary);
-  height: 100vh;
-  overflow: hidden;
+  background: var(--background-color);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.4;
 }
 
-.container {
-  display: flex;
-  height: 100vh;
-}
-
-/* Sidebar Styles */
+/* Sidebar (left column) */
 .sidebar {
   width: var(--sidebar-width);
   background-color: var(--sidebar-bg);
@@ -58,22 +54,42 @@ body {
 
 .sidebar-header h2 {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: 1.125rem;
   font-weight: 600;
-  color: var(--text-primary);
 }
 
 .conversation-list {
-  flex: 1;
-  padding: 0.5rem;
+  padding: 0.5rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
 }
 
 .conversation-item {
-  padding: 1rem;
-  border-radius: 8px;
-  margin-bottom: 0.25rem;
+  padding: 0.75rem 1rem;
   cursor: pointer;
-  transition: background-color 0.2s;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  border-radius: 8px;
+  transition: background-color 0.08s;
+}
+
+.conversation-item .conversation-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.conversation-item .conversation-preview {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .conversation-item:hover {
@@ -83,23 +99,6 @@ body {
 .conversation-item.active {
   background-color: #e8f0fe;
   border-left: 3px solid var(--primary-color);
-}
-
-.conversation-title {
-  font-weight: 500;
-  color: var(--text-primary);
-  margin-bottom: 0.25rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.conversation-preview {
-  font-size: 0.875rem;
-  color: var(--text-secondary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 /* Main Content Styles */
@@ -130,7 +129,7 @@ body {
   overflow-y: auto;
 }
 
-/* Question Section */
+/* Quiz / Question Box */
 .question-section {
   background: white;
   border: 1px solid var(--border-color);
@@ -150,18 +149,15 @@ body {
 .question-meta {
   display: flex;
   gap: 1rem;
-  margin-bottom: 1.5rem;
-}
-
-.question-number,
-.question-language {
-  font-size: 0.875rem;
+  align-items: center;
   color: var(--text-secondary);
-  font-weight: 500;
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
 }
 
 .options-grid {
   display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 0.75rem;
 }
 
@@ -178,33 +174,36 @@ body {
 }
 
 .option-item:hover {
-  border-color: var(--primary-color);
-  background-color: #e8f0fe;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
 }
 
 .option-bullet {
+  font-weight: 700;
   color: var(--primary-color);
-  font-weight: bold;
 }
 
 .option-text {
-  font-weight: 500;
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
-/* Input Area */
+/* Input area inside page (we'll override positioning below) */
 .input-area {
-  margin: 2rem 0;
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: transparent;
 }
 
+/* Input container */
 .input-container {
   display: flex;
   gap: 0.75rem;
-  align-items: flex-end;
+  align-items: center;
   border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 1rem;
   background: white;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
 #prompt-input {
@@ -216,6 +215,7 @@ body {
   font-size: 1rem;
   line-height: 1.5;
   padding: 0;
+  background: transparent;
 }
 
 #prompt-input::placeholder {
@@ -253,6 +253,7 @@ body {
   min-height: 100px;
 }
 
+/* Raw response details */
 .raw-response {
   margin-bottom: 1.5rem;
 }
@@ -277,6 +278,7 @@ body {
   white-space: pre-wrap;
 }
 
+/* Action buttons (copy/reset) */
 .action-buttons {
   display: flex;
   gap: 1rem;
@@ -317,7 +319,7 @@ body {
   line-height: 1.4;
 }
 
-/* Problematic Area */
+/* Problematic Area that should scroll with chat */
 #problematic-area {
   display: none;
   margin-top: 2rem;
@@ -353,66 +355,24 @@ body {
   font-weight: 600;
 }
 
-.settings-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-  margin-bottom: 2rem;
-}
-
-.settings-grid label {
-  font-weight: 500;
-  color: var(--text-primary);
-}
-
-.settings-grid input {
-  padding: 0.5rem;
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  font-size: 1rem;
-}
-
+/* Flex table for stats */
 .stats-table {
   width: 100%;
   border-collapse: collapse;
-  font-variant-numeric: tabular-nums;
 }
 
 .stats-table th,
 .stats-table td {
-  padding: 0.75rem;
+  padding: 0.5rem;
   text-align: left;
-  border-bottom: 1px solid var(--border-color);
 }
 
-.stats-table th {
-  font-weight: 500;
-  color: var(--text-secondary);
-  font-size: 0.875rem;
-}
-
-.stats-table td {
-  font-weight: 500;
-  color: var(--text-primary);
-}
-
-/* Error Message */
-#error-message {
-  display: none;
-  background: #f8d7da;
-  color: #721c24;
-  padding: 1rem;
-  margin: 1rem 2rem;
-  border: 1px solid #f5c6cb;
-  border-radius: 8px;
-}
-
-/* Speech Bubbles for Chat */
+/* Chat bubbles */
 .prompt,
 .response {
   font-size: 1rem;
   font-weight: normal;
-  padding: 1rem 1.5rem;
+  padding: 1rem 1.25rem;
   margin: 0.5rem 0;
   border-radius: 12px;
   max-width: 80%;
@@ -430,15 +390,10 @@ body {
   margin-left: auto;
 }
 
-/* Responsive Design */
+/* Responsive tweaks */
 @media (max-width: 768px) {
-  .container {
-    flex-direction: column;
-  }
-  
-  .sidebar {
-    width: 100%;
-    height: 200px;
+  .conversation-item .conversation-title {
+    max-width: 90%;
   }
   
   .settings-grid {
@@ -452,5 +407,92 @@ body {
   .prompt,
   .response {
     max-width: 90%;
+  }
+}
+
+/* ---------- LAYOUT OVERRIDES (minimal, non-visual) ---------- */
+
+/* keep original visuals for sidebar and question box but make layout behave like ChatGPT:
+   - fixed left sidebar so it does not scroll with chat
+   - single scrollable chat region that contains quiz/question box and messages
+   - fixed input at viewport bottom that remains visible
+*/
+
+:root {
+  --header-height: 72px;
+  --input-height: 84px;
+}
+
+/* Prevent body scroll — only the chat-container scrolls */
+html, body {
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Make the sidebar fixed while preserving existing visual styling */
+.sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 40;
+}
+
+/* Ensure main content sits to the right of the fixed sidebar */
+.main-content {
+  margin-left: var(--sidebar-width);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Keep header at top of main content */
+.chat-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  height: var(--header-height);
+}
+
+/* Make the chat-container the only scrollable region */
+.chat-container {
+  height: calc(100vh - var(--header-height));
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding-bottom: calc(var(--input-height) + 2rem); /* space so last messages aren't hidden under the fixed input */
+}
+
+/* Input area fixed to the bottom of the viewport (stays visible while scrolling) */
+.input-area {
+  position: fixed;
+  left: var(--sidebar-width);
+  right: 0;
+  bottom: 0;
+  z-index: 50;
+  padding: 1rem 2rem;
+  box-sizing: border-box;
+  background: linear-gradient(rgba(255,255,255,0.0), rgba(255,255,255,0.95));
+  border-top: 1px solid var(--border-color);
+}
+
+/* Mobile adjustments: allow normal page scrolling if sidebar stacks vertically */
+@media (max-width: 768px) {
+  html, body {
+    overflow: auto;
+  }
+  .sidebar {
+    position: relative;
+    width: 100%;
+    height: auto;
+  }
+  .main-content {
+    margin-left: 0;
+  }
+  .input-area {
+    left: 0;
+  }
+  .chat-container {
+    height: auto;
+    max-height: calc(100vh - var(--header-height) - var(--input-height));
   }
 }

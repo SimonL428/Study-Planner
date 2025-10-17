@@ -1,180 +1,182 @@
 <!--
   Copyright 2024 Google LLC
   SPDX-License-Identifier: Apache-2.0
- -->
- <!DOCTYPE html>
- <html lang="en">
-   <head>
-     <meta charset="utf-8">
-     <meta name="viewport" content="width=device-width, initial-scale=1">
-     <meta name="color-scheme" content="dark light">
-     <meta http-equiv="origin-trial" content="AwVL+SdUIkchcGZLp291gIQPWxrM5e1DCC0kz6B4ZIUNc3fl+m2XOzSOqm5jt6E+3TirD/9tPlCkHhzYyMx3lQcAAABxeyJvcmlnaW4iOiJodHRwOi8vMTI3LjAuMC4xOjgwMDAiLCJmZWF0dXJlIjoiQUlQcm9tcHRBUElNdWx0aW1vZGFsSW5wdXQiLCJleHBpcnkiOjE3NzQzMTA0MDAsImlzVGhpcmRQYXJ0eSI6dHJ1ZX0=">
-     <link
-       rel="icon"
-       href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✨</text></svg>"
-     >
-     <link rel="stylesheet" href="style.css">
-     <title>SimonGPT</title>
-     <script>
-       if (!isSecureContext) location.protocol = "https:";
-     </script>
-     <script src="script.js" type="module"></script>
-   </head>
-   <body>
-     <div class="container">
-       <!-- Left Sidebar -->
-       <div class="sidebar">
-         <div class="sidebar-header">
-           <h2>Recent</h2>
-         </div>
-         <div class="conversation-list">
-           <div class="conversation-item active">
-             <div class="conversation-title">The Number One: Properties an...</div>
-             <div class="conversation-preview">Building Chatbots with Gemini ...</div>
-           </div>
-           <div class="conversation-item">
-             <div class="conversation-title">Time Series Stationarity Analysis</div>
-           </div>
-           <div class="conversation-item">
-             <div class="conversation-title">Julia 代码调试请求</div>
-           </div>
-           <div class="conversation-item">
-             <div class="conversation-title">Windows 是查看盘软件推荐</div>
-           </div>
-           <div class="conversation-item">
-             <div class="conversation-title">Julia 启动未找到默认版本</div>
-           </div>
-           <div class="conversation-item">
-             <div class="conversation-title">图片编辑功能暂未开放</div>
-           </div>
-         </div>
-       </div>
- 
-       <!-- Main Chat Area -->
-       <div class="main-content">
-         <div class="chat-header">
-           <h1>✨ SimonGPT</h1>
-         </div>
- 
-         <div id="error-message"></div>
-         
-         <div id="prompt-area">
-           <div class="chat-container">
-             <div class="question-section">
-               <div class="question-header">
-                 <h3>What are the two major groups based on their geographic location and key physical traits?</h3>
-                 <div class="question-meta">
-                   <span class="question-number">Question 1</span>
-                   <span class="question-language">Language</span>
-                 </div>
-               </div>
-               
-               <div class="options-grid">
-                 <div class="option-item">
-                   <span class="option-bullet">•</span>
-                   <span class="option-text">steven</span>
-                 </div>
-                 <div class="option-item">
-                   <span class="option-bullet">•</span>
-                   <span class="option-text">simon</span>
-                 </div>
-                 <div class="option-item">
-                   <span class="option-bullet">•</span>
-                   <span class="option-text">tom</span>
-                 </div>
-                 <div class="option-item">
-                   <span class="option-bullet">•</span>
-                   <span class="option-text">gary potter</span>
-                 </div>
-               </div>
-             </div>
- 
-             <form class="input-area">
-               <div class="input-container">
-                 <textarea 
-                   id="prompt-input" 
-                   placeholder="Type your message here..."
-                   rows="3"
-                 ></textarea>
-                 <button type="submit" id="submit-button">
-                   <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                     <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-                   </svg>
-                 </button>
-               </div>
-             </form>
- 
-             <div class="response-section">
-               <div id="response-area"></div>
-               
-               <details class="raw-response">
-                 <summary>Raw response</summary>
-                 <div></div>
-               </details>
-               
-               <div class="action-buttons">
-                 <button id="copy-link-button">Copy link</button>
-                 <button id="reset-button">Reset session</button>
-               </div>
-               
-               <small class="help-text">
-                 💡 If there's a problem with the response, select the problematic text
-                 with your mouse before clicking the button.
-               </small>
-             </div>
- 
-             <div id="problematic-area">
-               <h2>Problematic:</h2>
-               <pre id="problem"></pre>
-             </div>
-           </div>
- 
-           <!-- Settings Panel -->
-           <div class="settings-panel">
-             <h2>Session Settings</h2>
-             <div class="settings-grid">
-               <label for="session-temperature">Temperature</label>
-               <input
-                 id="session-temperature"
-                 type="number"
-                 step="0.1"
-                 min="0"
-                 max="2"
-                 value="1.0"
-               >
-               <label for="session-top-k">Top-k</label>
-               <input
-                 id="session-top-k"
-                 min="1"
-                 type="number"
-                 value="40"
-               >
-             </div>
-             
-             <h2>Session Stats</h2>
-             <table class="stats-table">
-               <thead>
-                 <tr>
-                   <th>Temperature</th>
-                   <th>Top-k</th>
-                   <th>Tokens so far</th>
-                   <th>Tokens left</th>
-                   <th>Total tokens</th>
-                 </tr>
-               </thead>
-               <tbody>
-                 <tr>
-                   <td id="temperature">1.0</td>
-                   <td id="top-k">40</td>
-                   <td id="tokens-so-far">0</td>
-                   <td id="tokens-left">8192</td>
-                   <td id="max-tokens">8192</td>
-                 </tr>
-               </tbody>
-             </table>
-           </div>
-         </div>
-       </div>
-     </div>
-   </body>
- </html>
+-->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark light">
+    <meta http-equiv="origin-trial" content="AwVL+SdUIkchcGZLp2...5wdXQiLCJleHBpcnkiOjE3NzQzMTA0MDAsImlzVGhpcmRQYXJ0eSI6dHJ1ZX0=">
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✨</text></svg>"
+    >
+    <link rel="stylesheet" href="style.css">
+    <title>SimonGPT</title>
+    <script>
+      if (!isSecureContext) location.protocol = "https:";
+    </script>
+    <script src="script.js" type="module"></script>
+  </head>
+  <body>
+    <div class="container">
+      <!-- Left Sidebar (keeps original look) -->
+      <div class="sidebar">
+        <div class="sidebar-header">
+          <h2>Recent</h2>
+        </div>
+        <div class="conversation-list">
+          <div class="conversation-item active">
+            <div class="conversation-title">The Number One: Properties an...</div>
+            <div class="conversation-preview">Building Chatbots with Gemini ...</div>
+          </div>
+          <div class="conversation-item">
+            <div class="conversation-title">Time Series Stationarity Analysis</div>
+          </div>
+          <div class="conversation-item">
+            <div class="conversation-title">Julia 代码调试请求</div>
+          </div>
+          <div class="conversation-item">
+            <div class="conversation-title">Windows 是查看盘软件推荐</div>
+          </div>
+          <div class="conversation-item">
+            <div class="conversation-title">Julia 启动未找到默认版本</div>
+          </div>
+          <div class="conversation-item">
+            <div class="conversation-title">图片编辑功能暂未开放</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Chat Area -->
+      <div class="main-content">
+        <div class="chat-header">
+          <h1>✨ SimonGPT</h1>
+        </div>
+
+        <div id="error-message"></div>
+
+        <div id="prompt-area">
+          <!-- Chat container is the scrolling region: it contains the question (quiz) and responses -->
+          <div class="chat-container">
+            <div class="question-section">
+              <div class="question-header">
+                <h3>What are the two major groups based on their geographic location and key physical traits?</h3>
+                <div class="question-meta">
+                  <span class="question-number">Question 1</span>
+                  <span class="question-language">Language</span>
+                </div>
+              </div>
+
+              <div class="options-grid">
+                <div class="option-item">
+                  <span class="option-bullet">•</span>
+                  <span class="option-text">steven</span>
+                </div>
+                <div class="option-item">
+                  <span class="option-bullet">•</span>
+                  <span class="option-text">simon</span>
+                </div>
+                <div class="option-item">
+                  <span class="option-bullet">•</span>
+                  <span class="option-text">tom</span>
+                </div>
+                <div class="option-item">
+                  <span class="option-bullet">•</span>
+                  <span class="option-text">gary potter</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="response-section">
+              <div id="response-area"></div>
+
+              <details class="raw-response">
+                <summary>Raw response</summary>
+                <div></div>
+              </details>
+
+              <div class="action-buttons">
+                <button id="copy-link-button">Copy link</button>
+                <button id="reset-button">Reset session</button>
+              </div>
+
+              <small class="help-text">
+                💡 If there's a problem with the response, select the problematic text
+                with your mouse before clicking the button.
+              </small>
+            </div>
+
+            <div id="problematic-area">
+              <h2>Problematic:</h2>
+              <pre id="problem"></pre>
+            </div>
+
+            <!-- Settings Panel lives inside the scroll area below chat content so it scrolls with the chat -->
+            <div class="settings-panel">
+              <h2>Session Settings</h2>
+              <div class="settings-grid">
+                <label for="session-temperature">Temperature</label>
+                <input
+                  id="session-temperature"
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  max="2"
+                  value="1.0"
+                />
+                <label for="session-top-k">Top-k</label>
+                <input
+                  id="session-top-k"
+                  min="1"
+                  type="number"
+                  value="40"
+                />
+              </div>
+
+              <h2>Session Stats</h2>
+              <table class="stats-table">
+                <thead>
+                  <tr>
+                    <th>Temperature</th>
+                    <th>Top-k</th>
+                    <th>Tokens so far</th>
+                    <th>Tokens left</th>
+                    <th>Total tokens</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td id="temperature">1.0</td>
+                    <td id="top-k">40</td>
+                    <td id="tokens-so-far">0</td>
+                    <td id="tokens-left">8192</td>
+                    <td id="max-tokens">8192</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Fixed input area: stays visible at bottom of viewport, independent of scroll -->
+        <form class="input-area">
+          <div class="input-container">
+            <textarea
+              id="prompt-input"
+              placeholder="Type your message here..."
+              rows="3"
+            ></textarea>
+            <button type="submit" id="submit-button" aria-label="Send">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+              </svg>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </body>
+</html>
