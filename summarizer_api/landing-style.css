@@ -1,0 +1,154 @@
+/* 全局样式 */
+body, html {
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: #fff;
+    color: #000;
+}
+
+.page-container {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 5vh 5vw;
+    gap: 60px;
+    min-height: 90vh;
+}
+
+/* 左侧主内容区 */
+.main-content {
+    flex: 3; /* 占据更多空间 */
+    max-width: 700px;
+    display: flex;
+    flex-direction: column;
+}
+
+header h1 {
+    font-size: 3.5rem; /* 56px */
+    font-weight: 700;
+    margin-bottom: 1rem;
+}
+
+header p {
+    font-size: 1.125rem; /* 18px */
+    color: #555;
+    margin-bottom: 2rem;
+}
+
+.input-area textarea {
+    width: 100%;
+    height: 200px;
+    box-sizing: border-box;
+    padding: 1.5rem;
+    font-size: 1rem;
+    font-family: inherit;
+    border: 1px solid #e0e0e0;
+    background-color: #f8f8f8;
+    border-radius: 12px;
+    resize: none;
+}
+
+.input-area textarea:focus {
+    outline: none;
+    border-color: #000;
+}
+
+footer {
+    margin-top: 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.quiz-prompt h2 {
+    font-size: 1.5rem; /* 24px */
+    margin: 0;
+}
+
+.quiz-prompt p {
+    font-size: 1rem;
+    color: #555;
+    margin: 0.5rem 0 0 0;
+}
+
+#start-button {
+    background-color: #000;
+    color: #fff;
+    border: none;
+    padding: 1rem 2rem;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+#start-button:hover {
+    background-color: #333;
+}
+
+
+/* 右侧侧边栏 */
+.sidebar {
+    flex: 1.5; /* 占据较少空间 */
+    max-width: 300px;
+    padding-top: 1.5rem;
+}
+
+.logo {
+    width: 48px;
+    height: 48px;
+    background-color: #000;
+    /* 使用 clip-path 创建四叶草/花瓣形状 */
+    clip-path: polygon(50% 0%, 65% 35%, 100% 50%, 65% 65%, 50% 100%, 35% 65%, 0% 50%, 35% 35%);
+    margin-bottom: 1.5rem;
+}
+
+.sidebar h2 {
+    font-size: 1.75rem; /* 28px */
+    margin-bottom: 2rem;
+}
+
+.history-timeline {
+    position: relative;
+}
+
+/* 绘制中间的连接线 */
+.history-timeline::before {
+    content: '';
+    position: absolute;
+    left: 20px;
+    top: 10px;
+    bottom: 10px;
+    width: 2px;
+    background-color: #ccc;
+}
+
+.history-item {
+    width: 100%;
+    height: 60px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background-color: #fff;
+    margin-bottom: 30px; /* 包含连接线的间距 */
+    position: relative;
+    padding-left: 40px; /* 为连接线留出空间 */
+}
+
+/* 页面右下角按钮 */
+.page-actions {
+    position: fixed;
+    bottom: 30px;
+    right: 40px;
+}
+
+.language-button {
+    background-color: #000;
+    color: #fff;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+}
