@@ -31,20 +31,41 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
   margin: 0;
   color: var(--text-primary);
+<<<<<<< Updated upstream
   background: var(--background-color);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   line-height: 1.4;
+=======
+
+  /* Allow full-page scrolling */
+  min-height: 100vh;
+  overflow-y: auto;
+>>>>>>> Stashed changes
+}
+html {
+  scroll-behavior: smooth;
 }
 
+
+<<<<<<< Updated upstream
 /* Sidebar (left column) */
 .sidebar {
   width: var(--sidebar-width);
   background-color: var(--sidebar-bg);
   border-right: 1px solid var(--border-color);
+=======
+.container {
+  display: flex;
+  min-height: 100vh;   /* allow page growth */
+}
+
+.main-content {
+  flex: 1;
+>>>>>>> Stashed changes
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
+  overflow: visible;   /* let content expand downward */
 }
 
 .sidebar-header {
@@ -122,14 +143,18 @@ body {
 }
 
 .chat-container {
-  flex: 1;
   display: flex;
   flex-direction: column;
   padding: 2rem;
-  overflow-y: auto;
+  overflow: visible;   /* no internal scroll — let body scroll */
 }
 
+<<<<<<< Updated upstream
 /* Quiz / Question Box */
+=======
+
+/* Question Section */
+>>>>>>> Stashed changes
 .question-section {
   background: white;
   border: 1px solid var(--border-color);
@@ -251,9 +276,18 @@ body {
   border-radius: 12px;
   margin-bottom: 1rem;
   min-height: 100px;
+
+  /* Add these for scrolling */
+  max-height: 400px;      /* adjust as needed */
+  overflow-y: auto;
+  scroll-behavior: smooth;
 }
 
+<<<<<<< Updated upstream
 /* Raw response details */
+=======
+
+>>>>>>> Stashed changes
 .raw-response {
   margin-bottom: 1.5rem;
 }
@@ -409,6 +443,7 @@ body {
     max-width: 90%;
   }
 }
+<<<<<<< Updated upstream
 
 /* ---------- LAYOUT OVERRIDES (minimal, non-visual) ---------- */
 
@@ -495,4 +530,22 @@ html, body {
     height: auto;
     max-height: calc(100vh - var(--header-height) - var(--input-height));
   }
+=======
+/* === Combined Quiz + Prompt Layout === */
+.chat-interaction {
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-top: 2rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Chat history sits at top of page */
+#chat-history {
+  margin-bottom: 2rem;
+>>>>>>> Stashed changes
 }

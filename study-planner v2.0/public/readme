@@ -1,0 +1,12 @@
+landing 是主页面
+landing给信息后跳转至conversation_page,直接在conversation这个页面回答
+我们想要做到的事情是:
+1. landing页面给conversation_page传递信息
+2. conversation_page接收信息后,通过API回答
+3. 输出:summary（显示）questions（这里先储存起来）
+4.如果点quiz按钮,跳转至quiz页面
+5. quiz页面从questions,进行展示，这里我们只用选择题
+6. 选择后给出答案，或者储存，最后给出总分与总结
+这里要能做到:根据生成的问题与回答做出新的prompt回答
+也就是要储存自己的输出的同时用这个与用户的输入做交互
+

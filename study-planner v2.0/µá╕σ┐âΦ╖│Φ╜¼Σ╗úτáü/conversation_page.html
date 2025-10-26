@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Summarizer Page</title>
+    <link rel="stylesheet" href="conversation_style.css">
+</head>
+<body>
+
+    <div class="container">
+        <aside class="sidebar">
+            <button class="new-chat">📝 New chat</button>
+            <div class="menu-item">✨ Explore Gems</div>
+            <div class="recent-title">Recent</div>
+            <ul class="recent-list">
+                <li class="active">The Number One: Properties an...</li>
+                <li>Building Chatbots with Genini ...</li>
+                <li>Time Series Stationarity Analysis</li>
+                <li>Julia 代码调试请求</li>
+                <li>Windows 美区商店软件推荐</li>
+                </ul>
+        </aside>
+
+        <main class="main-content">
+            <header class="main-header">
+                <h1>Summarizer page</h1>
+                
+                <button id="quiz-button" class="quiz-btn">QUIZ</button>
+
+            </header>
+
+            <section class="summary-area">
+                <div id="input-display">
+                    </div>
+                <div id="output-display">
+                    </div>
+            </section>
+            
+            <footer class="input-container">
+                <div class="dialog-box">
+                    <textarea id="prompt-textarea" placeholder="在这里输入你想要概括的文字..."></textarea>
+                    <button id="submit-button">提交</button>
+                </div>
+            </footer>
+        </main>
+    </div>
+
+    <script type="module" src="conversation_script.js"></script>
+
+</body>
+</html>

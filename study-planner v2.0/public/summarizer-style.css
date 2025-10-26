@@ -1,0 +1,98 @@
+/* --- 基础布局 --- */
+body, html {
+    margin: 0; padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: #f7f7f8; color: #333; height: 100%;
+}
+.chat-container { display: flex; height: 100vh; }
+
+/* --- 侧边栏样式 (不变) --- */
+.chat-sidebar {
+    width: 260px; background-color: #ffffff; border-right: 1px solid #e0e0e0;
+    padding: 16px; box-sizing: border-box; display: flex;
+    flex-direction: column; overflow-y: auto; flex-shrink: 0;
+}
+.new-chat-btn {
+    width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc;
+    background-color: #fff; font-size: 1rem; cursor: pointer; text-align: left;
+    margin-bottom: 24px;
+}
+.new-chat-btn:hover { background-color: #f0f0f0; }
+.recent-title {
+    font-size: 0.9rem; font-weight: 600; color: #666; margin-bottom: 12px;
+}
+.recent-list { list-style: none; padding: 0; margin: 0; overflow-y: auto; flex-grow: 1; }
+.recent-item {
+    padding: 10px; border-radius: 8px; font-size: 0.95rem; cursor: pointer;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.recent-item:hover { background-color: #f5f5f5; }
+
+/* --- 主内容区 (布局不变) --- */
+.chat-main {
+    flex-grow: 1; display: flex; flex-direction: column;
+    height: 100vh; box-sizing: border-box;
+}
+
+/* --- 顶部 Header (不变) --- */
+.chat-header {
+    display: flex; justify-content: flex-end; gap: 10px;
+    padding: 20px 40px 0 40px; flex-shrink: 0;
+}
+.chat-header-btn {
+    background-color: #000; color: #fff; border: none; padding: 10px 20px;
+    border-radius: 8px; font-size: 1rem; cursor: pointer;
+}
+.chat-header-btn:hover { background-color: #333; }
+
+/* --- !!! 聊天显示区域 (新样式) !!! --- */
+.chat-display-area {
+    flex-grow: 1; /* 占据所有可用空间 */
+    overflow-y: auto; /* 让聊天记录滚动 */
+    padding: 20px 40px;
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto; /* 居中 */
+    box-sizing: border-box;
+}
+
+/* !!! 聊天气泡样式 !!! */
+.chat-message {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    word-wrap: break-word; /* 文本换行 */
+}
+.user-message {
+    background-color: #f0f4f9; /* 用户的消息用浅蓝色 */
+    border-color: #dceafb;
+}
+.bot-message {
+    background-color: #ffffff; /* AI 的消息用白色 */
+}
+.bot-message h1, .bot-message h2, .bot-message h3 { margin-top: 0; }
+.bot-message p:last-child { margin-bottom: 0; }
+
+/* --- 聊天输入区域 (固定在底部, 样式不变) --- */
+.chat-input-area {
+    flex-shrink: 0; /* 不压缩 */
+    padding: 20px 40px;
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto; /* 居中 */
+    box-sizing: border-box;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+#prompt-textarea {
+    flex-grow: 1; min-height: 50px; max-height: 200px; padding: 15px;
+    border: 1px solid #ccc; border-radius: 8px; font-size: 1rem;
+    box-sizing: border-box; resize: none;
+}
+#submit-button {
+    background-color: #000; color: #fff; border: none;
+    padding: 12px 24px; border-radius: 8px; font-size: 1rem;
+    cursor: pointer; flex-shrink: 0;
+}

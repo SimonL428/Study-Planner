@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="landing-style.css">
+    <meta http-equiv="origin-trial" 
+        content="ArYIwxvXJm49BoKKueinICfOPOYa2jgNsGtL+tFeBktrWhsztDlzKV972XMKVVOO1g6lNHec4oWMvWNqbDvOHA4AAABteyJvcmlnaW4iOiJodHRwczovL2FwaS0xZGI5Ni5maXJlYmFzZWFwcC5jb206NDQzIiwiZmVhdHVyZSI6IkFJUHJvbXB0QVBJTXVsdGltb2RhbElucHV0IiwiZXhwaXJ5IjoxNzc0MzEwNDAwfQ==">
+
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-functions-compat.js"></script>
+</head>
+<body>
+
+    
+
+    <div id="logged-out-view" class="logged-out-container">
+        <h1>Welcome to your AI Study Hub</h1>
+        <p>Login to see your personalized study history.</p>
+        <button id="login-btn" class="login-btn">Login with Google</button>
+        
+        <button id="guest-btn" class="login-btn secondary">Continue as Guest</button>
+        </div>
+
+    <div id="logged-in-view" class="dashboard-container" style="display: none;">
+        
+        <header class="dashboard-header">
+            <div id="user-info">Welcome, <span id="user-name">...</span></div>
+            <div class="header-actions">
+                <button id="start-new-chat-btn" class="header-btn primary">Start New Chat</button>
+                <button id="logout-btn" class="header-btn">Logout</button>
+            </div>
+        </header>
+
+        <main id="dashboard-main">
+
+            <div id="category-grid-view">
+                <h2>Your Top Topics</h2>
+                <p id="grid-loading-text">Loading your history...</p>
+                <div id="category-grid-container" class="grid-container">
+                    </div>
+            </div>
+
+            <div id="history-list-view" style="display: none;">
+                <button id="back-to-grid-btn" class="header-btn">&larr; Back to Topics</button>
+                <h2 id="list-view-title"></h2>
+                <div id="history-list-container" class="list-container">
+                    </div>
+            </div>
+
+            <div id="quiz-grid-view">
+            <h2>Your Topics with Quizzes</h2>
+            <div id="quiz-grid-loading-text">Loading your quizzes...</div>
+            <div id="quiz-grid-container" class="category-grid-container">
+                    </div>
+            </div>
+
+            <div id="quiz-list-view" style="display: none;">
+            <button id="back-to-grid-btn-quiz">&larr; Back to Topics</button>
+            <h2 id="quiz-list-view-title"></h2>
+            <div id="quiz-list-container" class="history-list-container">
+                    </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script src="landing-script.js"></script> 
+</body>
+</html>
