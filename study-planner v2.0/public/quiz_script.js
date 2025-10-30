@@ -1,3 +1,5 @@
+// Filename: quiz_script.js
+// Full Content:
 import { marked } from "https://cdn.jsdelivr.net/npm/marked@13.0.3/lib/marked.esm.js";
 import DOMPurify from "https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.es.mjs";
 
@@ -23,22 +25,25 @@ const db = firebase.firestore();
 const QuizApp = {
     session: null,
     summaryText: null,
+    targetLanguage: 'en', // The language we want the quiz to be generated in
+    // supportsTranslation removed as Translator API is no longer used here.
     elements: {
         quizContainer: null,
         nextButton: null,
         backButton: null,
         questionNumberButton: null,
-        mainPageButton: null, 
+        mainPageButton: null,
         conversationButton: null,
     },
     quizData: [],
     currentQuestionIndex: 0,
-    currentUser: null, 
+    currentUser: null,
     userAnswers: [], // <-- 用来存储你的所有答案
-    
-    QUIZ_SYSTEM_PROMPT: `You are a quiz generator. Based on the text I provide, generate exactly 5 multiple-choice questions.
+
+    // The BASE prompt. The language instruction will be added dynamically.
+    QUIZ_SYSTEM_PROMPT_BASE: `You are a quiz generator. Based on the text I provide, generate exactly 5 multiple-choice questions.
     Format your response as a JSON array.
-    Each object in the array must have ONLY these three keys:
+    Each object in the array must have ONLY these four keys:
     1. "question": The question text.
     2. "options": An array of 4 strings (the potential answers).
     3. "correctAnswer": The string from the 'options' array that is the correct answer.
@@ -51,19 +56,25 @@ const QuizApp = {
             this.showError("错误：您的浏览器不支持内置的Prompt API。");
             return;
         }
-        
+
+        // Translation support checks removed.
+
         try {
-            this.cacheDOMElements(); 
-            this.setupEventListeners(); 
+            this.cacheDOMElements();
+            this.setupEventListeners();
         } catch (error) {
             this.showError(`页面元素加载失败: ${error.message}。`);
             return;
         }
-        
-        await this.waitForAuth(); 
+
+        await this.waitForAuth();
+
+        // Retrieve target language from sessionStorage (set by conversation_page.js)
+        this.targetLanguage = sessionStorage.getItem('languageForQuiz') || 'en';
+
 
         const params = new URLSearchParams(window.location.search);
-        const quizId = params.get('quizId'); 
+        const quizId = params.get('quizId');
 
         // --- VVVV 核心修改：加载旧数据或新数据 VVVV ---
         if (quizId) {
@@ -71,12 +82,13 @@ const QuizApp = {
             await this.loadQuizFromFirestore(quizId);
         } else {
             // 【流程 B】：从 sessionStorage 继续 Quiz
+            // summaryText should be the English summary from the conversation page.
             this.summaryText = sessionStorage.getItem('summaryForQuiz');
             if (!this.summaryText) {
                 this.showError("错误：未找到摘要内容。请返回上一页重新生成摘要。");
                 this.elements.nextButton.disabled = true;
                 this.elements.backButton.disabled = true;
-                return; 
+                return;
             }
 
             // 加载我们已有的 Quiz 数据和答案
@@ -85,7 +97,7 @@ const QuizApp = {
 
             // 检查我们是不是刚从 result.html 返回
             const savedIndex = params.get('questionIndex');
-            
+
             if (savedIndex !== null) {
                 // (这是从 result.html 的 "Back" 按钮返回)
                 this.currentQuestionIndex = parseInt(savedIndex, 10);
@@ -100,7 +112,7 @@ const QuizApp = {
                 } else {
                     this.currentQuestionIndex = parseInt(nextIndexStr, 10);
                 }
-                
+
                 if (this.currentQuestionIndex >= this.quizData.length) {
                     this.displayEndOfQuiz();
                 } else {
@@ -109,13 +121,30 @@ const QuizApp = {
             }
             else {
                 // (这是一个全新的 Quiz, 需要从 AI 生成)
-                await this.createSession();
+                // The session is now created inside generateNewQuiz to ensure the correct language prompt is used.
                 await this.generateNewQuiz();
             }
         }
         // --- ^^^^ 核心修改结束 ^^^^ ---
     },
 
+    // (New Helper) Used to convert language codes ('zh') into names ('Chinese') for the prompt.
+    getLanguageNameForPrompt(languageTag) {
+        // Always use English names when instructing the AI model for best results.
+        try {
+            const displayNames = new Intl.DisplayNames(['en'], {
+                type: 'language',
+            });
+            const name = displayNames.of(languageTag);
+             // Ensure a valid name is returned, otherwise fallback to English to prevent confusing the model.
+            return name && name !== languageTag ? name : "English";
+        } catch (error) {
+            console.error("Error getting language name:", error);
+            return "English"; // Fallback to English if Intl fails
+        }
+    },
+
+    // (Updated) Load from Firestore
     async loadQuizFromFirestore(quizId) {
         if (!this.currentUser) {
             this.showError("您必须登录才能查看已保存的 Quiz。");
@@ -123,38 +152,48 @@ const QuizApp = {
         }
         try {
             this.elements.quizContainer.innerHTML = '<p class="loading-text">正在加载已保存的测验...</p>';
-            
+
             const docRef = db.collection("quizzes").doc(quizId);
             const docSnap = await docRef.get();
 
-            if (!docSnap.exists) { // (已修复：删掉了括号)
+            if (!docSnap.exists) {
                 this.showError("错误：未找到 ID 为 " + quizId + " 的测验。");
                 return;
             }
-            
+
             const quiz = docSnap.data();
-            
+
             if (quiz.userId !== this.currentUser.uid) {
                 this.showError("错误：您无权查看此测验。");
                 return;
             }
 
+            // Load the data directly
             this.quizData = quiz.questions;
-            this.summaryText = quiz.basedOnSummary; 
-            
-            // --- VVVV 核心修复：为新 quiz 初始化所有答案 VVVV ---
+            this.summaryText = quiz.basedOnSummary;
+            // Load the target language preference from the saved quiz data
+            this.targetLanguage = quiz.language || 'en';
+
+
+            // Store and display the final data
+            sessionStorage.setItem('currentQuizData', JSON.stringify(this.quizData));
+            sessionStorage.setItem('summaryForQuiz', this.summaryText);
+            // Store language context
+            sessionStorage.setItem('languageForQuiz', this.targetLanguage);
+
+
+            // Initialize answers
             this.userAnswers = new Array(this.quizData.length).fill(null);
             sessionStorage.setItem('allUserAnswers', JSON.stringify(this.userAnswers));
-            // --- ^^^^ 核心修复 ^^^^ ---
 
-            sessionStorage.setItem('currentQuizData', JSON.stringify(this.quizData));
-            sessionStorage.setItem('summaryForQuiz', this.summaryText); // <-- 修复了“未找到摘要”的 Bug
-            
             this.currentQuestionIndex = 0;
-            this.displayCurrentQuestion();
+            // Ensure the loading message is cleared if displayCurrentQuestion runs
+            if (this.quizData.length > 0) {
+                 this.displayCurrentQuestion();
+            }
 
         } catch (error) {
-            this.showError(`加载测验时出错: ${error.message}`); 
+            this.showError(`加载测验时出错: ${error.message}`);
         }
     },
 
@@ -170,7 +209,7 @@ const QuizApp = {
                     this.currentUser = null;
                     console.warn("User is not logged in. Quiz will not be saved.");
                 }
-                resolve(); 
+                resolve();
             });
         });
     },
@@ -193,93 +232,146 @@ const QuizApp = {
         this.elements.conversationButton.addEventListener('click', this.goToConversationPage.bind(this));
     },
 
-    async createSession() {
-        // (此函数不变)
+    // (New) Creates the session with the correct language prompt
+    async createSessionForLanguage(targetLanguage) {
         try {
+            let finalPrompt = this.QUIZ_SYSTEM_PROMPT_BASE;
+            const languageName = this.getLanguageNameForPrompt(targetLanguage);
+
+            // Add the language instruction to the prompt.
+            finalPrompt += `\nIMPORTANT: Respond entirely in ${languageName}. The questions, options, and explanations must all be in ${languageName}.`;
+
+            console.log("Creating Quiz session with prompt targeting:", languageName);
+
             this.session = await LanguageModel.create({
-                initialPrompts: [{ role: 'system', content: this.QUIZ_SYSTEM_PROMPT }],
+                initialPrompts: [{ role: 'system', content: finalPrompt }],
             });
         } catch (error) {
             this.showError(`创建AI会话失败: ${error.message}`);
+            this.session = null;
         }
     },
 
+    // (Updated) Simplified flow: Create session with correct language -> Generate -> Parse -> Display
     async generateNewQuiz() {
-        // (此函数不变)
+
+        // 1. Initialize Session with Target Language
+        await this.createSessionForLanguage(this.targetLanguage);
+
         if (!this.session) {
-            this.showError("会话未初始化，请刷新页面。");
+            // Error message already shown in createSessionForLanguage
             return;
         }
+
         try {
+            // 2. UI Setup
             this.elements.quizContainer.innerHTML = '<p class="loading-text">正在生成新测验，请稍候...</p>';
-            this.currentQuestionIndex = 0; 
+            this.currentQuestionIndex = 0;
             this.elements.backButton.disabled = true;
 
+            // 3. Generate Quiz (The generated output is already in the target language)
+            // The input (this.summaryText) is the English summary generated previously.
             const stream = await this.session.promptStreaming(this.summaryText);
             let fullResponse = '';
             for await (const chunk of stream) {
                 fullResponse += chunk;
             }
-            this.parseAndStoreQuizData(fullResponse);
-            this.displayCurrentQuestion();
+
+            // 4. Parse and Store
+            const finalQuizData = this.parseQuizData(fullResponse);
+            if (!finalQuizData || finalQuizData.length === 0) {
+                // Error message already shown by parseQuizData
+                return;
+            }
+
+            // Store the data (no longer need separate English/Translated versions)
+            this.storeQuizData(finalQuizData);
+
+            // 5. Display
+            // Ensure the loading/error message is cleared if displayCurrentQuestion runs
+            if (this.quizData.length > 0) {
+                this.displayCurrentQuestion();
+            }
 
         } catch (error) {
+            // Catches errors from the Prompt API generation
             this.showError(`生成测验时出错: ${error.message}`);
         }
     },
 
-    parseAndStoreQuizData(jsonString) {
-        // (此函数不变)
+    // (Helper) Parses the raw JSON string from the API
+    parseQuizData(jsonString) {
         try {
             const startIndex = jsonString.indexOf('[');
             const endIndex = jsonString.lastIndexOf(']');
             let cleanedString = jsonString;
-            
+
             if (startIndex !== -1 && endIndex !== -1) {
                 cleanedString = jsonString.substring(startIndex, endIndex + 1);
             } else {
                 throw new Error("在API响应中未找到有效的JSON数组。");
             }
 
-            this.quizData = JSON.parse(cleanedString);
-            sessionStorage.setItem('currentQuizData', JSON.stringify(this.quizData));
-            
-            // --- VVVV 核心修改：为新 quiz 初始化所有答案 VVVV ---
-            this.userAnswers = new Array(this.quizData.length).fill(null);
-            sessionStorage.setItem('allUserAnswers', JSON.stringify(this.userAnswers));
-            // --- ^^^^ 核心修改 ^^^^ ---
-            
-            this.saveQuizToFirestore(); 
-            
+            const parsedData = JSON.parse(cleanedString);
+
+             // Basic validation
+            if (!Array.isArray(parsedData) || parsedData.length === 0) {
+                 throw new Error("JSON解析成功，但数据为空或不是数组。");
+            }
+
+            return parsedData;
+
         } catch (error) {
             this.showError(`解析测验数据时出错: ${error.message}. API原始返回: ${jsonString}`);
-            this.quizData = []; 
+            return null;
         }
     },
 
-    async saveQuizToFirestore() {
-        // (此函数不变)
+    // translateQuizData helper function is removed.
+
+    // (Helper) Handles storing data in memory, sessionStorage, and initiating Firestore save
+    // (Simplified as we no longer track separate English data)
+    storeQuizData(displayedQuizData) {
+        this.quizData = displayedQuizData;
+        sessionStorage.setItem('currentQuizData', JSON.stringify(this.quizData));
+
+        // Initialize all answers
+        this.userAnswers = new Array(this.quizData.length).fill(null);
+        sessionStorage.setItem('allUserAnswers', JSON.stringify(this.userAnswers));
+
+        // Pass data for saving
+        this.saveQuizToFirestore(displayedQuizData);
+    },
+
+
+    // (Updated) Saves the generated quiz data.
+    // (Simplified as we no longer track separate English data)
+    async saveQuizToFirestore(displayedQuizData) {
         if (!this.currentUser) {
             console.warn("User not logged in, skipping save to Firestore.");
             return;
         }
-        if (!this.quizData || this.quizData.length === 0) {
+        if (!displayedQuizData || displayedQuizData.length === 0) {
             console.warn("No quiz data to save.");
             return;
         }
 
         const topicName = sessionStorage.getItem('categoryForQuiz') || "Uncategorized";
-        const title = this.quizData[0]?.question || "Untitled Quiz";
-        
+        // Use the displayed data for the title
+        const title = displayedQuizData[0]?.question || "Untitled Quiz";
+
         const quizDocument = {
             userId: this.currentUser.uid,
             title: title,
-            topicName: topicName, 
+            topicName: topicName,
             quizType: "multiple_choice",
-            basedOnSummary: this.summaryText,
-            questions: this.quizData, 
+            basedOnSummary: this.summaryText, // The English summary it was based on
+            questions: displayedQuizData, // The generated quiz (in the target language)
+            language: this.targetLanguage, // The language the quiz was generated in
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         };
+
+        // englishQuestions field is removed as it's no longer relevant in this approach.
 
         try {
             const docRef = await db.collection("quizzes").add(quizDocument);
@@ -291,12 +383,15 @@ const QuizApp = {
 
     displayCurrentQuestion() {
         if (this.quizData.length === 0) {
-            this.showError("无法加载测验题目。");
+            // Don't overwrite existing error messages if data failed to load
+            if (!this.elements.quizContainer.innerHTML.includes('color: red')) {
+                 this.showError("无法加载测验题目。");
+            }
             return;
         }
-        
+
         const questionData = this.quizData[this.currentQuestionIndex];
-        
+
         // --- VVVV 核心修改：检查是否已答完 VVVV ---
         if (!questionData) {
             // (所有题都答完了)
@@ -304,9 +399,9 @@ const QuizApp = {
             return;
         }
         // --- ^^^^ 核心修改 ^^^^ ---
-        
-        this.elements.quizContainer.innerHTML = ''; 
-        this.updateQuestionNumberButton(); 
+
+        this.elements.quizContainer.innerHTML = '';
+        this.updateQuestionNumberButton();
         this.elements.backButton.disabled = (this.currentQuestionIndex === 0);
 
         if (this.currentQuestionIndex === this.quizData.length - 1) {
@@ -314,7 +409,7 @@ const QuizApp = {
         } else {
             this.elements.nextButton.textContent = "next";
         }
-        
+
         const questionWrapper = document.createElement('div');
         questionWrapper.className = 'quiz-question-wrapper';
         const questionText = document.createElement('p');
@@ -335,7 +430,7 @@ const QuizApp = {
         questionWrapper.appendChild(optionsGrid);
         this.elements.quizContainer.appendChild(questionWrapper);
     },
-    
+
     // --- VVVV 新增函数 VVVV ---
     // (当题目答完时，显示这个)
     displayEndOfQuiz() {
@@ -348,20 +443,20 @@ const QuizApp = {
 
     // --- VVVV 核心修改：保存“所有”答案 VVVV ---
     handleOptionClick(selectedOption, questionData) {
-        
+
         // 1. 保存这个问题的答案
         this.userAnswers[this.currentQuestionIndex] = selectedOption;
-        
+
         // 2. 把 *所有* 答案的列表存入 sessionStorage
         sessionStorage.setItem('allUserAnswers', JSON.stringify(this.userAnswers));
-        
+
         // 3. (不变) 保存当前问题的数据，以便 result.html 显示 *这道题* 的结果
         sessionStorage.setItem('currentQuestionData', JSON.stringify({
             ...questionData,
             selectedOption: selectedOption,
             questionIndex: this.currentQuestionIndex
         }));
-        
+
         // 4. (不变) 告诉下一页 (quiz.html) 下一题是第几题
         sessionStorage.setItem('nextQuestionIndex', this.currentQuestionIndex + 1);
 
@@ -393,7 +488,7 @@ const QuizApp = {
             this.displayCurrentQuestion();
         }
     },
-    
+
     goToMainPage() {
         // (此函数不变)
         window.location.href = 'index.html';
@@ -406,9 +501,14 @@ const QuizApp = {
 
     updateQuestionNumberButton() {
         // (此函数不变)
-        this.elements.questionNumberButton.textContent = `Question ${this.currentQuestionIndex + 1}`;
+        // Check added to prevent error if quizData is empty during loading/error states
+        if (this.quizData && this.quizData.length > 0) {
+            this.elements.questionNumberButton.textContent = `Question ${this.currentQuestionIndex + 1}`;
+        } else {
+            this.elements.questionNumberButton.textContent = "Quiz";
+        }
     },
-    
+
     showError(message) {
         // (此函数不变)
         console.error(message);

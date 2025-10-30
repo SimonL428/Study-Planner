@@ -17,22 +17,31 @@
     <div class="quiz-page-container">
         <main class="main-content">
             <header class="main-header">
-                <h1>Reinforce your keypoint</h1>
+                <h1>Quiz Time</h1>
                 <div class="header-buttons">
-                    <button id="conversation-btn" class="conversation-btn">Conversation</button>
-                    <button id="main-page-btn" class="main-page-btn">main page</button>
-                    <button id="back-btn" class="back-btn">Back</button>
-                    <button id="question-number-btn" class="question-btn">Question 1</button>
-                    <button id="next-quiz-btn" class="next-btn">next</button>
+                    <button id="main-page-btn" class="main-page-btn">Main Page</button>
+                    <button id="conversation-btn" class="conversation-btn">Back to Conversation</button>
                 </div>
             </header>
-            
-            <section id="quiz-container">
-                <p class="loading-text">正在加载测验题，请稍候...</p>
+
+            <div id="start-quiz-container" class="start-quiz-container" style="display: none;">
+                <button id="generate-quiz-btn" class="generate-quiz-btn">Generate Quiz</button>
+                <p>Click the button to generate a quiz based on your summary.</p>
+            </div>
+            <section id="quiz-container" class="quiz-container">
+                <p class="loading-text">Initializing...</p>
             </section>
+
+            <footer class="main-footer" id="main-footer" style="display: none;">
+                <div class="footer-buttons">
+                    <button id="back-btn" class="back-btn" disabled>back</button>
+                    <button id="question-number-btn" class="question-btn">Quiz</button>
+                    <button id="next-quiz-btn" class="next-btn" disabled>next</button>
+                </div>
+            </footer>
         </main>
     </div>
-    
-    <script type="module" src="quiz_script.js"></script>
+
+    <script src="quiz_script.js" type="module"></script>
 </body>
 </html>

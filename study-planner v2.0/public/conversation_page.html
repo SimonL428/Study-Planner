@@ -6,10 +6,19 @@
     <meta http-equiv="origin-trial" 
         content="ArYIwxvXJm49BoKKueinICfOPOYa2jgNsGtL+tFeBktrWhsztDlzKV972XMKVVOO1g6lNHec4oWMvWNqbDvOHA4AAABteyJvcmlnaW4iOiJodHRwczovL2FwaS0xZGI5Ni5maXJlYmFzZWFwcC5jb206NDQzIiwiZmVhdHVyZSI6IkFJUHJvbXB0QVBJTXVsdGltb2RhbElucHV0IiwiZXhwaXJ5IjoxNzc0MzEwNDAwfQ==">
     <title>Conversation</title>
-    <link rel="stylesheet" href="summarizer-style.css">
+    <link rel="stylesheet" href="summarizer-style.css"> 
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
+
+    <script src="pdf.min.js"></script>
+    <script src="mammoth.browser.min.js"></script>
+    <script>
+        // Required setup for PDF.js (using the local worker file)
+        if (window.pdfjsLib) {
+            window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'pdf.worker.min.js';
+        }
+    </script>
 </head>
 <body>
     
@@ -38,7 +47,15 @@
 
             <footer class="chat-input-area">
                 <textarea id="prompt-textarea" placeholder="在这里粘贴您的段落..."></textarea>
-                <button id="submit-button">Generate Summary</button>
+
+                <div class="chat-button-container">
+                    <input type="file" id="file-upload-input" accept=".pdf,.docx,.txt" style="display: none;">
+                    <label for="file-upload-input" id="file-upload-button" class="chat-control-btn">📤 Upload File</label>
+                    
+                    <button id="submit-button">Generate Summary</button>
+                </div>
+                <div id="file-status-display" class="file-status"></div>
+
             </footer>
         
         </main>

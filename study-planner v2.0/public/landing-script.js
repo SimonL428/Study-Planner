@@ -9,18 +9,8 @@ const firebaseConfig = {
 };
 
 /* =================================================
-   你的最终版 landing-script.js (即 DashboardApp.js)
-   (包含了所有修复)
+   Your landing-script.js
    ================================================= */
-
-
-
-/* =================================================
-   你的最终版 landing-script.js (V3 - 修复了 data is not defined)
-   (包含了所有修复)
-   ================================================= */
-
-
 
 // --- 2. 初始化 Firebase ---
 firebase.initializeApp(firebaseConfig);
@@ -39,7 +29,6 @@ const DashboardApp = {
         this.cacheDOMElements();
         
         try {
-            // (修复 Guest 登出 Bug)
             await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
             console.log("Firebase persistence set to LOCAL.");
         } catch (error) {
@@ -134,7 +123,7 @@ const DashboardApp = {
     },
 
     async loadHistoryAndBuildGrid(userId) {
-        // (不变 ... 包含 'id: doc.id' 修复)
+        // (不变)
         this.elements.gridLoadingText.textContent = 'Loading your history...';
         try {
             const snapshot = await db.collection("history").where("userId", "==", userId).orderBy("timestamp", "desc").get();
@@ -179,7 +168,7 @@ const DashboardApp = {
     },
 
     displayListView(categoryName) {
-        // (不变 ... 包含删除按钮的逻辑)
+        // --- VVVV THIS FUNCTION IS FIXED VVVV ---
         const data = this.fullHistoryData[categoryName];
         if (!data) return; 
         this.elements.listViewTitle.textContent = categoryName; 
@@ -189,10 +178,15 @@ const DashboardApp = {
             itemEl.className = 'history-list-item'; 
             const textEl = document.createElement('p');
             textEl.textContent = item.originalText;
+            
+            // THIS IS THE FIX:
             textEl.addEventListener('click', () => {
-                const encodedText = encodeURIComponent(item.originalText);
-                window.location.href = `conversation_page.html?prompt=${encodedText}`;
+                // Use sessionStorage to avoid "URI Too Long" error
+                sessionStorage.setItem('promptToLoadFromHistory', item.originalText);
+                window.location.href = 'conversation_page.html?loadFromHistory=true';
             });
+            // --- END FIX ---
+
             const deleteBtn = document.createElement('button');
             deleteBtn.className = 'delete-btn';
             deleteBtn.textContent = '×'; 
@@ -209,7 +203,7 @@ const DashboardApp = {
     },
 
     async deleteHistoryItem(id, element, categoryName) {
-        // (不变 ... 删除函数的逻辑)
+        // (不变)
         if (!confirm("Are you sure you want to delete this summary?")) {
             return;
         }
@@ -273,14 +267,10 @@ const DashboardApp = {
         });
     },
 
-    // --- VVVV 核心修复 VVVV ---
-    // (修复了 'data is not defined' Bug)
     displayQuizListView(categoryName) {
+        // (不变)
         const quizzes = this.fullQuizData[categoryName];
-        
-        // --- VVVV 修复：从 'data' 改为 'quizzes' VVVV ---
         if (!quizzes) return; 
-        // --- ^^^^ ------------------------------ ^^^^ ---
 
         this.elements.quizListViewTitle.textContent = categoryName; 
         this.elements.quizListContainer.innerHTML = ''; 
@@ -291,7 +281,6 @@ const DashboardApp = {
             itemEl.innerHTML = `<p>${quiz.title}</p> <span class="quiz-type-badge">${quiz.type}</span>`;
 
             itemEl.addEventListener('click', () => {
-                // (已修复 404 Bug)
                 window.location.href = `quiz.html?quizId=${quiz.id}`;
             });
             
@@ -300,7 +289,6 @@ const DashboardApp = {
 
         this.showView('quiz-list');
     },
-    // --- ^^^^ 核心修复 ^^^^ ---
 
     showView(viewName) {
         // (不变)

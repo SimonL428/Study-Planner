@@ -1,0 +1,10 @@
+{
+  "hosting": {
+    "public": "study-planner v2.0\\public",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ]
+  }
+}

@@ -1,3 +1,5 @@
+// Filename: conversation_script.js
+// Full Content:
 // --- 1. 导入 (不变) ---
 import { marked } from "https://cdn.jsdelivr.net/npm/marked@13.0.3/lib/marked.esm.js";
 import DOMPurify from "https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.es.mjs";
@@ -9,7 +11,7 @@ const firebaseConfig = {
   projectId: "api-1db96",
   storageBucket: "api-1db96.firebasestorage.app",
   messagingSenderId: "636817576621",
-  appId: "1:636817576621:web:f8a69a44f06b736fb32c24",
+  appId: "1:636817576621:web:f8a69a44f06b732c24",
   measurementId: "G-9HDH0XHWT1"
 };
 
@@ -18,46 +20,80 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// --- 4. 你的 App 逻辑 (V2.2 - 修复了 Category Bug) ---
+// --- 4. 你的 App 逻辑 ---
 const App = {
-    session: null,
+    session: null, // Main session for text
+    languageDetector: null, // Language Detector instance
+    supportsTranslation: false, // Flag for translation support
     elements: {},
-    currentSummary: "",
-    currentCategory: "", // <-- VVVV 新增 VVVV ---
-    currentUser: null, 
-    SUMMARY_SYSTEM_PROMPT: `Summarize the user's input text concisely, focusing on key points and main ideas.`,
-    CATEGORY_SYSTEM_PROMPT: `You are a librarian. Categorize the following text into a single, general academic subject.
-    Respond with ONLY one or two words.
-    Examples: "Mathematics", "History", "Biology", "Economics", "Computer Science", "Literature".`,
-    
+    currentSummary: "", // This will store the English summary for the Quiz
+    currentCategory: "",
+    currentDetectedLanguage: 'en', // Tracks the language of the current session/summary
+    currentUser: null,
+    // Updated prompt to ensure output is English for consistent translation source
+    SUMMARY_SYSTEM_PROMPT: `Summarize the user's input text concisely, focusing on key points and main ideas. Respond in English.`,
+    CATEGORY_SYSTEM_PROMPT: `You are a librarian. Categorize the following text into a single, general academic subject. Respond with ONLY one or two words. Examples: "Mathematics", "History", "Biology", "Economics", "Computer Science", "Literature".`,
+
     async init() {
-        // (此函数不变)
         this.cacheDOMElements();
         this.setupEventListeners();
-
         if (!('LanguageModel'in self)) {
             this.addMessageToChat('错误：您的浏览器不支持内置的Prompt API。', 'bot', true);
+            // Disable input if core API is missing
+            this.toggleInputs(true);
             return;
+        }
+
+        // Check for LanguageDetector and Translator support
+        // We also check Translator here because we use it for pre-emptive downloads
+        this.supportsTranslation = ('LanguageDetector' in self) && ('Translator' in self);
+
+        if (this.supportsTranslation) {
+            try {
+                // Initialize detector
+                this.languageDetector = await LanguageDetector.create();
+                console.log("LanguageDetector and Translator APIs available.");
+            } catch (error) {
+                console.error("Failed to initialize LanguageDetector:", error);
+                this.supportsTranslation = false; // Disable if initialization fails
+            }
+        } else {
+            console.warn("LanguageDetector or Translator API not supported. Translation features disabled.");
         }
 
         auth.onAuthStateChanged(user => {
             if (user) {
-                this.currentUser = user;
-                this.loadRecentHistory(user.uid);
+                this.currentUser = user; this.loadRecentHistory(user.uid);
             } else {
-                this.currentUser = null;
-                const historyList = this.elements.recentHistoryList;
-                if (historyList) {
-                    historyList.innerHTML = '<p>Please login to see recent history.</p>';
-                }
+                this.currentUser = null; if (this.elements.recentHistoryList) { this.elements.recentHistoryList.innerHTML = '<p>Please login to see recent history.</p>'; }
             }
         });
+        this.handleUrlPromptOnLoad();
+     },
 
-        this.handleUrlPromptOnLoad(); 
+    // Helper function to disable/enable inputs
+    toggleInputs(disabled, disableQuiz = false) {
+        if(this.elements.submitButton) this.elements.submitButton.disabled = disabled;
+        if(disableQuiz && this.elements.quizButton) this.elements.quizButton.disabled = disabled;
+        if(this.elements.fileUploadInput) this.elements.fileUploadInput.disabled = disabled;
+        if(this.elements.fileUploadButton) this.elements.fileUploadButton.style.opacity = disabled ? 0.5 : 1;
+        if(this.elements.promptTextarea) this.elements.promptTextarea.disabled = disabled;
+    },
+
+    // Helper function for language names (adapted from playground example)
+    languageTagToHumanReadable(languageTag, targetLanguage = 'en') {
+        try {
+            const displayNames = new Intl.DisplayNames([targetLanguage], {
+                type: 'language',
+            });
+            return displayNames.of(languageTag);
+        } catch (error) {
+            console.error("Error getting language name:", error);
+            return languageTag;
+        }
     },
 
     cacheDOMElements() {
-        // (此函数不变)
         this.elements = {
             chatDisplay: document.getElementById('chat-display-area'),
             chatMain: document.getElementById('chat-main'),
@@ -66,173 +102,449 @@ const App = {
             quizButton: document.getElementById('quiz-button'),
             mainPageButton: document.getElementById('main-page-btn'),
             newChatButton: document.getElementById('new-chat-btn'),
-            recentHistoryList: document.getElementById('recent-history-list')
+            recentHistoryList: document.getElementById('recent-history-list'),
+            fileUploadInput: document.getElementById('file-upload-input'),
+            fileUploadButton: document.getElementById('file-upload-button'), // The label for doc/text
+            fileStatusDisplay: document.getElementById('file-status-display')
         };
-    },
-    
+     },
+
+    // (Updated) Added async logic to the Quiz Button listener for pre-emptive downloads
     setupEventListeners() {
-        this.elements.submitButton.addEventListener('click', this.handleSubmit.bind(this));
-        this.elements.promptTextarea.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.handleSubmit(); }
-        });
-        
-        // --- VVVV 核心修复 1 VVVV ---
-        // (在跳转前保存 category)
-        this.elements.quizButton.addEventListener('click', () => {
-            if (this.currentSummary) {
-                // --- VVVV 这是关键修复 VVVV ---
-                // 这是一个新 Quiz，我们必须清除所有旧数据
-                sessionStorage.removeItem('currentQuizData');   // (清除旧的题目)
-                sessionStorage.removeItem('allUserAnswers');    // (清除旧的答案)
-                sessionStorage.removeItem('nextQuestionIndex'); // (清除旧的进度)
-                sessionStorage.removeItem('showAllResults');    // (清除旧的“暗号”)
-                // --- ^^^^ 修复结束 ^^^^ ---
+        if (this.elements.submitButton) {
+            this.elements.submitButton.addEventListener('click', this.handleSubmit.bind(this));
+        }
+        if (this.elements.promptTextarea) {
+            this.elements.promptTextarea.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.handleSubmit(); }
+            });
+        }
+        if (this.elements.quizButton) {
+            // *** Major Change: Made this listener async ***
+             this.elements.quizButton.addEventListener('click', async () => {
+                if (this.currentSummary) {
+                    sessionStorage.removeItem('currentQuizData');
+                    sessionStorage.removeItem('allUserAnswers');
+                    sessionStorage.removeItem('nextQuestionIndex');
+                    sessionStorage.removeItem('showAllResults');
+                    // currentSummary is maintained as the English version for the quiz
+                    sessionStorage.setItem('summaryForQuiz', this.currentSummary);
+                    sessionStorage.setItem('categoryForQuiz', this.currentCategory);
+                    // Pass the detected language preference to the quiz page
+                    sessionStorage.setItem('languageForQuiz', this.currentDetectedLanguage);
 
-                // (现在我们再存入新数据)
-                sessionStorage.setItem('summaryForQuiz', this.currentSummary);
-                sessionStorage.setItem('categoryForQuiz', this.currentCategory); 
-                
-                window.location.href = 'quiz.html';
-            } else {
-                alert('请先生成一个摘要！');
-            }
-        });
-        // --- ^^^^ 核心修复 1 ^^^^ ---
+                    // *** FIX: Pre-emptive Download Initiation ***
+                    // To prevent the "User Gesture Required" error on the quiz page,
+                    // we initiate the download NOW using the fresh click gesture, BEFORE navigation.
+                    const sourceLang = 'en';
+                    const targetLang = this.currentDetectedLanguage;
 
-        this.elements.mainPageButton.addEventListener('click', () => {
-            window.location.href = 'index.html';
-        });
+                    // Check if Translator is available and translation is needed
+                    if (this.supportsTranslation && targetLang !== sourceLang && 'Translator' in self) {
+                        try {
+                            console.log(`Pre-emptively checking/initiating download for ${targetLang}...`);
+                            // Check availability (this is usually fast)
+                            const availability = await Translator.availability({ sourceLanguage: sourceLang, targetLanguage: targetLang });
 
-        this.elements.newChatButton.addEventListener('click', () => {
-            window.location.href = 'conversation_page.html'; 
-        });
+                            // If it needs to be downloaded, start the creation process now.
+                            if (availability === 'downloadable' || availability === 'downloading') {
+                                console.log(`Status: ${availability}. Initiating background download.`);
+                                // Initiate creation. We do NOT await it, as we want to navigate immediately.
+                                // The download will continue in the background. When quiz.html calls create(), it will resolve when the download finishes.
+                                Translator.create({ sourceLanguage: sourceLang, targetLanguage: targetLang })
+                                    .then(() => console.log(`Pre-emptive creation/download for ${targetLang} completed successfully.`))
+                                    .catch(err => console.error(`Pre-emptive creation/download for ${targetLang} failed:`, err));
+                            } else {
+                                console.log(`Language ${targetLang} status: ${availability}. No immediate action needed.`);
+                            }
+                        } catch (error) {
+                            // Catch errors during availability check or initiation attempt
+                            console.error("Error during pre-emptive translation check:", error);
+                        }
+                    }
+                    // *********************************************
+
+                    // Navigate to the quiz page
+                    window.location.href = 'quiz.html';
+                } else {
+                    alert('请先生成一个摘要！');
+                }
+            });
+        }
+        if (this.elements.mainPageButton) {
+            this.elements.mainPageButton.addEventListener('click', () => {
+                window.location.href = 'index.html';
+            });
+        }
+        if (this.elements.newChatButton) {
+             this.elements.newChatButton.addEventListener('click', () => {
+                // Reset context for a new chat
+                this.currentDetectedLanguage = 'en';
+                window.location.href = 'conversation_page.html';
+            });
+        }
+        if (this.elements.fileUploadInput) {
+            this.elements.fileUploadInput.addEventListener('change', this.handleFileUpload.bind(this));
+        }
+         // No listener needed for the label (#file-upload-button), relies on default behavior
     },
 
-    
-    // --- VVVV 核心修复 2 VVVV ---
-    // (在 handleSubmit 中 AWAIT categorizeAndSave)
+    // (No significant changes here, keeping the optimized flow)
     async handleSubmit() {
-        const userInput = this.elements.promptTextarea.value.trim();
-        if (!userInput) return;
-        
-        this.elements.submitButton.disabled = true;
-        this.elements.quizButton.disabled = true; // <-- VVVV 新增 VVVV (在AI运行时禁用 "Go to Quiz")
-        this.elements.promptTextarea.value = ''; 
-        
-        this.elements.chatDisplay.innerHTML = '';
+        const userInput = this.elements.promptTextarea.value.trim(); if (!userInput) return;
+
+        // 1. UI Setup
+        this.toggleInputs(true, true); // Disable all inputs
+
+        if (this.elements.fileStatusDisplay) this.elements.fileStatusDisplay.textContent = '';
+        this.elements.promptTextarea.value = '';
+
+        const welcomeMessage = this.elements.chatDisplay.querySelector('h2');
+        if (welcomeMessage && welcomeMessage.textContent.includes('Welcome!')) {
+            this.elements.chatDisplay.innerHTML = '';
+        }
+
         this.addMessageToChat(userInput, 'user');
-        
-        const loadingEl = this.addMessageToChat('正在生成摘要...', 'bot');
+        // Update initial message to reflect the new process
+        const loadingEl = this.addMessageToChat('Detecting language and preparing resources...', 'bot');
+
+        let detectedLanguage = 'en';
+        const summarySourceLanguage = 'en'; // We explicitly requested English in the prompt
+        let translationPromise = null; // Promise to hold the translator instance if download starts
 
         try {
+            // 2. Language Detection (Quick)
+            if (this.supportsTranslation && this.languageDetector) {
+                try {
+                    const detectionResult = await this.languageDetector.detect(userInput);
+                    if (detectionResult && detectionResult.length > 0) {
+                        detectedLanguage = detectionResult[0].detectedLanguage;
+                        console.log(`Detected input language: ${detectedLanguage}`);
+                    }
+                } catch (error) {
+                    console.error("Language detection failed:", error);
+                    // Proceed with default 'en' if detection fails
+                }
+            }
+
+            // Store the detected language for this session/summary
+            this.currentDetectedLanguage = detectedLanguage;
+
+            const expectTranslation = this.supportsTranslation && detectedLanguage !== summarySourceLanguage;
+
+            // 3. Check Availability and Initiate Download (Crucial Step)
+            // We do this NOW, while the user gesture from the submit click is still active.
+            if (expectTranslation) {
+                try {
+                    const availability = await Translator.availability({ sourceLanguage: summarySourceLanguage, targetLanguage: detectedLanguage });
+                    console.log(`Translator availability for ${detectedLanguage}: ${availability}`);
+
+                    // 'on-device' (or sometimes 'available') means it's ready immediately.
+                    // 'downloadable' or 'downloading' means we must initiate the download now using the gesture.
+                    if (availability === 'on-device' || availability === 'available' || availability === 'downloadable' || availability === 'downloading') {
+                        console.log(`Status: ${availability}. Initiating creation/download.`);
+
+                        // Start creation but DON'T await it yet. Store the promise.
+                        // This allows the download to start concurrently with the summarization.
+                        translationPromise = Translator.create({ sourceLanguage: summarySourceLanguage, targetLanguage: detectedLanguage })
+                            .catch(error => {
+                                // This catches the "User Gesture Required" error if the gesture expired too quickly, or network errors.
+                                console.error("Translator creation/download initiation failed:", error);
+                                return { error: error.message }; // Return an error object for better messaging
+                            });
+                    }
+                    // If 'unavailable', translationPromise remains null.
+
+                } catch (error) {
+                    console.error("Error checking translation availability:", error);
+                    // Proceed without translation if availability check fails
+                }
+            }
+
+            // 4. Summarization (Long process, runs concurrently with download)
+            let statusMessage = 'Generating summary...';
+            if (translationPromise && expectTranslation) {
+                 // Update status if a download might be happening concurrently
+                statusMessage = `(Preparing translation: ${this.languageTagToHumanReadable(detectedLanguage)}...) Generating summary...`;
+            }
+            loadingEl.innerHTML = DOMPurify.sanitize(marked.parse(statusMessage));
+
+
             if (!this.session) {
-                console.log("User gesture detected. Creating summary session...");
                 this.session = await LanguageModel.create({
                     initialPrompts: [{ role: 'system', content: this.SUMMARY_SYSTEM_PROMPT }],
                 });
-                console.log("Session created.");
             }
 
             const stream = await this.session.promptStreaming(userInput);
-            let result = '';
-            for await (const chunk of stream) { 
-                result += chunk;
-                loadingEl.innerHTML = DOMPurify.sanitize(marked.parse(result));
-            }
-            this.currentSummary = result;
+            let englishSummary = '';
 
-            // 4. 保存到数据库 (并等待它完成！)
-            if (this.currentUser) {
-                // --- VVVV 核心修复：添加 "await" VVVV ---
-                await this.categorizeAndSave(userInput, result);
-                // --- ^^^^ --------------------- ^^^^ ---
+            // Consume the stream.
+            for await (const chunk of stream) {
+                englishSummary += chunk;
+                // Only update the display if we are NOT expecting a translation (Hybrid Streaming).
+                // This prevents flashing English text before the translation is ready.
+                if (!expectTranslation) {
+                    loadingEl.innerHTML = DOMPurify.sanitize(marked.parse(englishSummary));
+                    this.elements.chatDisplay.scrollTop = this.elements.chatDisplay.scrollHeight;
+                }
             }
-            
-            // --- VVVV 新增 VVVV ---
-            // (现在 this.currentSummary 和 this.currentCategory 都准备好了)
-            this.elements.quizButton.disabled = false; 
+
+            let displayedSummary = englishSummary;
+
+            // 5. Finalize Translation
+            if (expectTranslation) {
+                if (translationPromise) {
+                    loadingEl.innerHTML = DOMPurify.sanitize(marked.parse('Finalizing translation...'));
+                    // Now we await the translator creation/download promise started in Step 3.
+                    const translator = await translationPromise;
+
+                    if (translator && !translator.error) {
+                        try {
+                            const translatedText = await translator.translate(englishSummary);
+                            displayedSummary = translatedText;
+                        } catch (translationError) {
+                            // Error during the actual translation process
+                             displayedSummary = `${englishSummary}\n\n*(Translation failed: ${translationError.message})*`;
+                        }
+                    } else {
+                        // Translator creation/download failed (e.g., the gesture issue persisted or network error)
+                        const errorDetail = translator?.error || "Unknown error";
+                        // Provide specific feedback if it was the gesture issue
+                        if (errorDetail.includes('Requires a user gesture')) {
+                             // If the gesture failed even with the optimized flow, provide the English summary and context.
+                            displayedSummary = `${englishSummary}\n\n*(Translation failed: Browser requires permission to download language pack. The automatic download was blocked. Please ensure downloads are allowed and try again.)*`;
+                        } else {
+                            displayedSummary = `${englishSummary}\n\n*(Translation failed: Could not prepare language pack. ${errorDetail})*`;
+                        }
+                    }
+                } else {
+                    // Availability was 'unavailable' (translationPromise was null)
+                    displayedSummary = `${englishSummary}\n\n*(Note: Translation to ${this.languageTagToHumanReadable(detectedLanguage)} is unavailable.)*`;
+                }
+            }
+
+            // 6. Final Display
+            // If we buffered (expected translation), we now update the display.
+            if (expectTranslation) {
+                loadingEl.innerHTML = DOMPurify.sanitize(marked.parse(displayedSummary));
+                this.elements.chatDisplay.scrollTop = this.elements.chatDisplay.scrollHeight;
+            }
+
+            // 7. Save History and set context
+            // We call this regardless of login status to ensure currentSummary is set for the session
+            await this.categorizeAndSave(userInput, displayedSummary, englishSummary);
 
         } catch (error) {
+            // Catches errors primarily from the Prompt API or major flow issues
+            console.error("Error during handleSubmit:", error);
             this.addMessageToChat(`生成摘要时出错: ${error.message}`, 'bot', true);
-        } finally {
-            this.elements.submitButton.disabled = false;
+        }
+        finally {
+            // Re-enable inputs
+            this.toggleInputs(false);
+            // Enable Quiz button if a summary was successfully generated
+            if (this.currentSummary && this.elements.quizButton) {
+                this.elements.quizButton.disabled = false;
+            }
+            if (this.elements.fileUploadInput) {
+                this.elements.fileUploadInput.value = null; // Clear file input
+            }
+        }
+     },
+
+    async handleFileUpload(event) {
+        // (No changes required here)
+        // --- THIS IS THE CORRECT LOGIC for DOC/PDF/TXT ---
+        const file = event.target.files[0];
+        if (!file) {
+            if (this.elements.fileUploadInput) this.elements.fileUploadInput.value = null; // Clear selection if cancelled
+            return;
+        }
+
+        const fileType = file.type;
+        const fileName = file.name;
+
+        // Only process supported document types
+        if (
+            fileType === 'application/pdf' ||
+            fileType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+            fileType === 'text/plain' ||
+            fileName.endsWith('.docx') || fileName.endsWith('.pdf') || fileName.endsWith('.txt')
+        ) {
+            // Disable buttons during processing
+            this.elements.submitButton.disabled = true;
+            if (this.elements.fileUploadButton) this.elements.fileUploadButton.style.opacity = 0.5;
+            if (this.elements.fileStatusDisplay) this.elements.fileStatusDisplay.textContent = `Reading ${file.name}...`;
+
+            try {
+                const text = await this.extractTextFromFile(file);
+                this.elements.promptTextarea.value = text; // Put extracted text in box
+                if (this.elements.fileStatusDisplay) this.elements.fileStatusDisplay.textContent = `Loaded ${file.name}. Click 'Generate Summary'.`;
+                this.elements.submitButton.disabled = false; // Enable submit now text is ready
+            } catch (error) {
+                console.error("File extraction error:", error);
+                if (this.elements.fileStatusDisplay) this.elements.fileStatusDisplay.textContent = `Error: ${error.message}`;
+                // Re-enable upload button on error
+                if (this.elements.fileUploadButton) this.elements.fileUploadButton.style.opacity = 1;
+                this.elements.submitButton.disabled = false; // Also re-enable submit just in case
+            } finally {
+                 // Always clear the file input selection after processing or error
+                 if (this.elements.fileUploadInput) this.elements.fileUploadInput.value = null;
+                 // Re-enable upload button if it wasn't already
+                 if (this.elements.fileUploadButton) this.elements.fileUploadButton.style.opacity = 1;
+            }
+        } else {
+             // File type not supported by this workflow
+            alert("Unsupported file type. Please upload PDF, DOCX, or TXT using this button.");
+             if (this.elements.fileUploadInput) this.elements.fileUploadInput.value = null; // Clear the invalid selection
         }
     },
-    // --- ^^^^ 核心修复 2 ^^^^ ---
-    
-    async categorizeAndSave(userInput, summaryText) {
-        // --- VVVV 核心修复 3 VVVV ---
-        // (把 category 存到 this.currentCategory 变量里)
+
+    async extractTextFromFile(file) {
+        // (Optimized file reading logic)
+        const fileType = file.name.split('.').pop().toLowerCase();
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                     // Check if the result is already a string (happens if readAsText was called for TXT)
+                    if (typeof e.target.result === 'string') {
+                        resolve(e.target.result);
+                        return;
+                    }
+
+                    const arrayBuffer = e.target.result;
+                    if (fileType === 'pdf') {
+                        const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                        let fullText = '';
+                        for (let i = 1; i <= pdf.numPages; i++) {
+                            const page = await pdf.getPage(i);
+                            const textContent = await page.getTextContent();
+                            fullText += textContent.items.map(item => item.str).join(' ') + '\n';
+                        } resolve(fullText);
+                    } else if (fileType === 'docx') {
+                        const result = await window.mammoth.extractRawText({ arrayBuffer: arrayBuffer });
+                        resolve(result.value);
+                    } else if (fileType === 'txt') {
+                        // This path handles the case where TXT was somehow read as ArrayBuffer (less likely but safe)
+                        const textDecoder = new TextDecoder("utf-8");
+                        resolve(textDecoder.decode(arrayBuffer));
+                    }
+                     else { reject(new Error("Unsupported file. Use PDF, DOCX, or TXT.")); }
+                } catch (error) { reject(new Error(`Failed to parse ${fileType}: ${error.message}`)); }
+            };
+            reader.onerror = (e) => { reject(new Error("Failed to read file.")); };
+
+            // Use the most efficient reading method per file type
+            if (fileType === 'txt') {
+                reader.readAsText(file);
+            } else if (fileType === 'pdf' || fileType === 'docx') {
+                reader.readAsArrayBuffer(file);
+            }
+            else { reject(new Error("Unsupported file. Use PDF, DOCX, or TXT.")); }
+        });
+     },
+
+    // Updated to handle saving both displayed and English summaries, AND the detected language
+    async categorizeAndSave(userInput, summaryText, englishSummary = null) {
+        // Determine the definitive English version for Quizzes and set it as currentSummary
+        const summaryForQuiz = englishSummary || summaryText;
+        this.currentSummary = summaryForQuiz;
+
+        // If the user is not logged in, we set the context for the session but don't save to DB.
+        if (!this.currentUser) {
+            this.currentCategory = "Session";
+            // Ensure language is set even for guests
+            if (!this.currentDetectedLanguage) this.currentDetectedLanguage = 'en';
+            return;
+        }
+
         try {
             const categorySession = await LanguageModel.create({
-                 initialPrompts: [{ role: 'system', content: this.CATEGORY_SYSTEM_PROMPT }],
+                initialPrompts: [{ role: 'system', content: this.CATEGORY_SYSTEM_PROMPT }],
             });
+            // Categorization is based on the original user input
             const category = await categorySession.prompt(userInput);
-            
-            // --- VVVV 新增这一行 VVVV ---
-            this.currentCategory = category.trim(); 
-            // --- ^^^^ 新增这一行 ^^^^ ---
+            this.currentCategory = category.trim();
 
-            await db.collection("history").add({
+            const dataToSave = {
                 userId: this.currentUser.uid,
-                category: this.currentCategory, // (使用新变量)
+                category: this.currentCategory,
                 originalText: userInput,
-                summaryText: summaryText,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
-            });
+                summaryText: summaryText, // The displayed (potentially translated) summary
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                detectedLanguage: this.currentDetectedLanguage // Save the language preference
+            };
+
+            // If translation happened (englishSummary is provided and different), save the English version separately.
+            if (englishSummary && englishSummary !== summaryText) {
+                dataToSave.englishSummaryText = englishSummary;
+            }
+
+            await db.collection("history").add(dataToSave);
+
         } catch (error) {
-            console.error("保存历史记录失败:", error);
-            // 即使保存失败，也设置一个默认分类，以便 quiz 页面能用
-            this.currentCategory = "Uncategorized"; 
+            console.error("Save history failed:", error);
+            this.currentCategory = "Uncategorized";
         }
-    },
-    // --- ^^^^ 核心修复 3 ^^^^ ---
+     },
 
     handleUrlPromptOnLoad() {
-        // (此函数不变)
+        // (No changes required here)
         const params = new URLSearchParams(window.location.search);
         const promptFromUrl = params.get('prompt');
+        const loadFromHistory = params.get('loadFromHistory');
+
         if (promptFromUrl) {
             let decodedPrompt = "";
-            try { 
+            try {
                 decodedPrompt = decodeURIComponent(promptFromUrl);
             } catch (e) {
-                console.error("无法解码 URL中的 prompt:", e);
-                this.addMessageToChat("错误：URL中的文本格式不正确，无法自动加载。", 'bot', true);
+                console.error("Could not decode prompt from URL:", e);
+                this.addMessageToChat("Error: Invalid text format in URL, cannot load automatically.", 'bot', true);
                 return;
             }
             this.elements.promptTextarea.value = decodedPrompt;
-            this.addMessageToChat("请点击 'Generate Summary' (Submit按钮) 开始。", 'bot');
+            this.addMessageToChat("Click 'Generate Summary' to start.", 'bot');
+
+        } else if (loadFromHistory === 'true') {
+            const promptFromSession = sessionStorage.getItem('promptToLoadFromHistory');
+            if (promptFromSession) {
+                this.elements.promptTextarea.value = promptFromSession;
+                sessionStorage.removeItem('promptToLoadFromHistory');
+                this.addMessageToChat("Loaded from history. Click 'Generate Summary' to re-run.", 'bot');
+            }
         }
-    },
-    
+     },
+
     addMessageToChat(content, type = 'bot', isError = false) {
-        // (此函数不变)
+        // (No changes required here)
         const messageEl = document.createElement('div');
         messageEl.className = 'chat-message';
-        
+
         if (type === 'user') {
             messageEl.classList.add('user-message');
-            messageEl.innerHTML = `<p>${content}</p>`;
+            messageEl.innerHTML = `<p>${content}</p>`; // Always wrap user text in <p>
         } else {
             messageEl.classList.add('bot-message');
             messageEl.innerHTML = DOMPurify.sanitize(marked.parse(content));
         }
-        
+
         if (isError) {
             messageEl.style.color = 'red';
         }
-        
+
         this.elements.chatDisplay.appendChild(messageEl);
         this.elements.chatDisplay.scrollTop = this.elements.chatDisplay.scrollHeight;
-        
+
         return messageEl;
-    },
+     },
 
     loadRecentHistory(userId) {
-        // (此函数不变)
+        // (No changes required here)
         const listEl = this.elements.recentHistoryList;
-        listEl.innerHTML = ''; 
+        listEl.innerHTML = ''; // Clear previous items/message
         db.collection("history")
           .where("userId", "==", userId)
           .orderBy("timestamp", "desc")
@@ -242,39 +554,42 @@ const App = {
                   listEl.innerHTML = '<p>No recent history.</p>';
                   return;
               }
-              listEl.innerHTML = '';
+              listEl.innerHTML = ''; // Clear loading/no history message
               snapshot.forEach(doc => {
                   const item = doc.data();
                   const li = document.createElement('li');
                   li.className = 'recent-item';
-                  li.textContent = item.originalText;
-                  li.title = item.originalText;
+                  li.textContent = item.originalText; // Display original text
+                  li.title = item.originalText; // Show full text on hover
                   li.addEventListener('click', () => {
                       this.loadHistoryItem(item);
                   });
                   listEl.appendChild(li);
               });
           }, error => {
-              console.error("加载侧边栏历史失败:", error);
+              console.error("Error loading sidebar history:", error);
               listEl.innerHTML = '<p>Error loading history.</p>';
           });
-    },
+     },
 
+    // Updated to prioritize English summary for the Quiz feature AND load the language preference
     loadHistoryItem(item) {
-        // --- VVVV 核心修复 4 VVVV ---
-        // (从 history 加载时，也要填充 category！)
+        // Always clears the screen when loading a history item
         this.elements.chatDisplay.innerHTML = '';
         this.addMessageToChat(item.originalText, 'user');
+        // Display the summary that was shown to the user (potentially translated)
         this.addMessageToChat(item.summaryText, 'bot');
-        
-        this.currentSummary = item.summaryText;
-        this.currentCategory = item.category || "Uncategorized"; // <-- VVVV 新增 VVVV
-        
-        // (启用 "Go to Quiz" 按钮)
+
+        // Set currentSummary to the English version if it exists, otherwise use the displayed version
+        this.currentSummary = item.englishSummaryText || item.summaryText;
+        this.currentCategory = item.category || "Uncategorized";
+        // Load the language preference associated with this history item
+        this.currentDetectedLanguage = item.detectedLanguage || 'en';
         this.elements.quizButton.disabled = false;
-    }
+     }
 };
 
+// --- 5. Start App (Unchanged) ---
 document.addEventListener('DOMContentLoaded', () => {
     App.init();
 });
