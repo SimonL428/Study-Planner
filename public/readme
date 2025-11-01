@@ -1,0 +1,21 @@
+Index is the main page.
+
+Index passes information to conversation_page and redirects to it. The response is generated directly on the conversation_page.
+
+What we want to achieve is:
+
+The Index page passes information to the conversation_page.
+
+The conversation_page receives the information and generates a response using an API.
+
+Output: a summary (which is displayed) and questions (which are stored for later).
+
+If the 'quiz' button is clicked, it redirects to the quiz page.
+
+The quiz page displays the stored questions. We will only use multiple-choice questions here.
+
+After a selection is made, either show the answer immediately or store it, and finally provide a total score and a conclusion.
+
+It needs to be possible to use the generated questions and answers to make new prompt responses.
+
+In other words, it must store its own output (the summary/questions) and use that, along with the user's new input, for future interactions.

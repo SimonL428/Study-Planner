@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="origin-trial" 
+        content="ArYIwxvXJm49BoKKueinICfOPOYa2jgNsGtL+tFeBktrWhsztDlzKV972XMKVVOO1g6lNHec4oWMvWNqbDvOHA4AAABteyJvcmlnaW4iOiJodHRwczovL2FwaS0xZGI5Ni5maXJlYmFzZWFwcC5jb206NDQzIiwiZmVhdHVyZSI6IkFJUHJvbXB0QVBJTXVsdGltb2RhbElucHV0IiwiZXhwaXJ5IjoxNzc0MzEwNDAwfQ==">
+    <meta http-equiv="origin-trial" 
+        content="As35m+6Rmjn0HDXSCbzFyYiw3Lh+kqjSoxXKQ7oI8dY00mBzSf9g1mNGqAYubG+dpsOPJHHJdyl875jd7knXigIAAABleyJvcmlnaW4iOiJodHRwczovL2FwaS0xZGI5Ni53ZWIuYXBwOjQ0MyIsImZlYXR1cmUiOiJBSVByb21wdEFQSU11bHRpbW9kYWxJbnB1dCIsImV4cGlyeSI6MTc3NDMxMDQwMH0=">    
+    <title>Reinforce Your Keypoint</title>
+    <link rel="stylesheet" href="quiz_style.css">
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
+
+</head>
+<body>
+    
+    <div class="quiz-page-container">
+        <main class="main-content">
+            <header class="main-header">
+                <h1>Reinforce your keypoint</h1>
+                <div class="header-buttons">
+                    <button id="conversation-btn" class="conversation-btn">Conversation</button>
+                    <button id="main-page-btn" class="main-page-btn">main page</button>
+                    <button id="back-btn" class="back-btn">Back</button>
+                    <button id="question-number-btn" class="question-btn">Question 1</button>
+                    <button id="next-quiz-btn" class="next-btn">next</button>
+                </div>
+            </header>
+            
+            <section id="quiz-container">
+                <p class="loading-text">正在加载测验题，请稍候...</p>
+            </section>
+        </main>
+    </div>
+    
+    <script type="module" src="quiz_script.js"></script>
+</body>
+</html>

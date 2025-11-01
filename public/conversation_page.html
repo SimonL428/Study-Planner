@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="origin-trial" 
+        content="ArYIwxvXJm49BoKKueinICfOPOYa2jgNsGtL+tFeBktrWhsztDlzKV972XMKVVOO1g6lNHec4oWMvWNqbDvOHA4AAABteyJvcmlnaW4iOiJodHRwczovL2FwaS0xZGI5Ni5maXJlYmFzZWFwcC5jb206NDQzIiwiZmVhdHVyZSI6IkFJUHJvbXB0QVBJTXVsdGltb2RhbElucHV0IiwiZXhwaXJ5IjoxNzc0MzEwNDAwfQ==">
+    <meta http-equiv="origin-trial" 
+        content="As35m+6Rmjn0HDXSCbzFyYiw3Lh+kqjSoxXKQ7oI8dY00mBzSf9g1mNGqAYubG+dpsOPJHHJdyl875jd7knXigIAAABleyJvcmlnaW4iOiJodHRwczovL2FwaS0xZGI5Ni53ZWIuYXBwOjQ0MyIsImZlYXR1cmUiOiJBSVByb21wdEFQSU11bHRpbW9kYWxJbnB1dCIsImV4cGlyeSI6MTc3NDMxMDQwMH0=">    
+    <title>Conversation</title>
+    <link rel="stylesheet" href="summarizer-style.css">
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
+    <script src="pdf.min.js"></script>
+    <script src="mammoth.browser.min.js"></script>
+</head>
+<body>
+    
+    <div class="chat-container">
+        <aside class="chat-sidebar">
+            <button id="new-chat-btn" class="new-chat-btn">📝 New chat</button>
+            <div class="recent-title">Recent</div>
+            <ul id="recent-history-list" class="recent-list">
+                <p id="history-loading-text">Loading history...</p>
+            </ul>
+        </aside>
+
+        <main class="chat-main" id="chat-main">
+            
+            <header class="chat-header">
+                <button id="main-page-btn" class="chat-header-btn">Main page</button>
+                <button id="quiz-button" class="chat-header-btn">Go to Quiz</button>
+            </header>
+
+            <div class="chat-display-area" id="chat-display-area">
+                <div class="chat-message bot-message">
+                    <h2>Welcome!</h2>
+                    <p>Paste your text below to get started.</p>
+                </div>
+            </div>
+
+            <footer class="chat-input-area" id="chat-input-area">
+
+    <div id="image-preview-container" style="display: none;">
+        <img id="image-preview" src="#" alt="Image preview"/>
+        <button id="clear-image-btn" title="Remove image">&times;</button>
+    </div>
+
+    <div class="chat-input-row-wrapper">
+
+        <label for="image-upload-input" class="image-upload-label" title="Upload Image">
+            📷
+        </label>
+        <input type="file" id="image-upload-input" accept="image/png, image/jpeg, image/webp">
+
+        <label for="file-upload-input" class="file-upload-label" title="Upload PDF/DOCX">
+            📎
+        </label>
+        <input type="file" id="file-upload-input" accept=".pdf,.docx,.txt">
+
+        <textarea id="prompt-textarea" placeholder="Paste text or upload a file..."></textarea>
+
+        <button id="submit-button" title="Generate Summary">
+             </button>
+
+    </div> </footer>
+        
+        </main>
+    </div>
+
+    <script type="module" src="conversation_script.js"></script> 
+    <div id="loading-overlay" style="display: none;">
+        <p>Loading...</p>
+    </div>
+    <script type="module" src="conversation_script.js"></script> 
+</body>
+</html>
